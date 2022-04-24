@@ -35,7 +35,7 @@ namespace Oxide.CSharp
             var pluginNames = GetPlugins(rawAssembly);
             if (pluginNames.Length <= 0)
             {
-                Interface.Oxide.LogWarning($"Assembly {name} contains no plugins and will not be loaded");
+                // Interface.Oxide.LogWarning($"Assembly {name} contains no plugins and will not be loaded");
                 return null;
             }
 
