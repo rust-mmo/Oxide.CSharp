@@ -150,13 +150,11 @@ namespace Oxide.Plugins
                 var name = args.Name.Split(',')[0];
                 if (File.Exists($"{Interface.Oxide.RootDirectory}\\{name}.dll"))
                 {
-                    Interface.Oxide.LogWarning("1");
                     return Assembly.Load(File.ReadAllBytes($"{Interface.Oxide.RootDirectory}\\{name}.dll"));
                 }
                 
                 if (File.Exists($"{Interface.Oxide.PluginDirectory}\\{name}.dll"))
                 {
-                    Interface.Oxide.LogWarning("2");
                     return Assembly.Load(File.ReadAllBytes($"{Interface.Oxide.PluginDirectory}\\{name}.dll"));
                 }
 
