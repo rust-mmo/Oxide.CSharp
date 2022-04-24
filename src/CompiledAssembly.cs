@@ -247,7 +247,7 @@ namespace Oxide.Plugins
                             continue;
                         }
 
-                        if (type.Namespace == "Oxide.Plugins")
+                        if (IsPluginType(type))
                         {
                             if (PluginNames.Contains(type.Name))
                             {
@@ -273,15 +273,6 @@ namespace Oxide.Plugins
                                     ? $"{PluginNames[0]} has polluted the global namespace by defining {type.Name}"
                                     : $"A plugin has polluted the global namespace by defining {type.Name}");
                                 //RemoteLogger.Info($"A plugin has polluted the global namespace by defining {type.Name}: {PluginNames.ToSentence()}");
-                            }
-                        }
-                        else if (type.FullName != "<Module>")
-                        {
-                            if (!PluginNames.Any(plugin => type.FullName.StartsWith($"Oxide.Plugins.{plugin}")))
-                            {
-                                Interface.Oxide.LogWarning(PluginNames.Length == 1
-                                    ? $"{PluginNames[0]} has polluted the global namespace by defining {type.FullName}"
-                                    : $"A plugin has polluted the global namespace by defining {type.FullName}");
                             }
                         }
                     }
@@ -353,6 +344,18 @@ namespace Oxide.Plugins
                 return true;
             }
             return false;
+        }
+
+        private static bool IsPluginType(TypeDefinition definition)
+        {
+            if (definition == null)
+            {
+                return false;
+            }
+
+            return definition.Name == nameof(CSharpPlugin) ||
+                   definition.Name == nameof(CovalencePlugin) ||
+                   IsPluginType(definition.BaseType?.Resolve());
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Oxide.Core;
 using System;
+using System.Linq;
 using System.Reflection;
 
 namespace Oxide.Plugins
@@ -11,7 +12,7 @@ namespace Oxide.Plugins
         public CompiledAssembly LastGoodAssembly;
         public bool IsLoading;
 
-        public CompilablePlugin(CSharpExtension extension, CSharpPluginLoader loader, string directory, string name) : base(extension, loader, directory, name)
+        public CompilablePlugin(CSharpExtension extension, CSharpPluginLoader loader, string directory, string name, string compiledAssemblyName = null) : base(extension, loader, directory, name, compiledAssemblyName)
         {
         }
 
@@ -44,63 +45,73 @@ namespace Oxide.Plugins
                     return;
                 }
 
-                Type type = CompiledAssembly.LoadedAssembly.GetType($"Oxide.Plugins.{Name}");
-                if (type == null)
+                foreach (var type in CompiledAssembly.LoadedAssembly.GetTypes().Where(x => x.Name == Name))
                 {
-                    InitFailed($"Unable to find main plugin class: {Name}");
-                    return;
-                }
+                    if (type.GetCustomAttributes(typeof(InfoAttribute), true).Length <= 0)
+                    {
+                        Interface.Oxide.LogWarning($"Plugin '{Name}' (type {type.Name}) is missing an {nameof(InfoAttribute)} and will not be loaded");
+                        continue;
+                    }
 
-                CSharpPlugin plugin;
-                try
-                {
-                    plugin = Activator.CreateInstance(type) as CSharpPlugin;
-                }
-                catch (MissingMethodException)
-                {
-                    InitFailed($"Main plugin class should not have a constructor defined: {Name}");
-                    return;
-                }
-                catch (TargetInvocationException invocationException)
-                {
-                    Exception ex = invocationException.InnerException;
-                    InitFailed($"Unable to load {ScriptName}. {ex.ToString()}");
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    InitFailed($"Unable to load {ScriptName}. {ex.ToString()}");
-                    return;
-                }
+                    CSharpPlugin plugin;
+                    try
+                    {
+                        plugin = Activator.CreateInstance(type) as CSharpPlugin;
+                    }
+                    catch (MissingMethodException)
+                    {
+                        InitFailed($"Main plugin class should not have a constructor defined: {Name}");
+                        return;
+                    }
+                    catch (TargetInvocationException invocationException)
+                    {
+                        Exception ex = invocationException.InnerException;
+                        InitFailed($"Unable to load {ScriptName}. {ex.ToString()}");
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        InitFailed($"Unable to load {ScriptName}. {ex.ToString()}");
+                        return;
+                    }
 
-                if (plugin == null)
-                {
-                    //RemoteLogger.Error($"Plugin assembly failed to load: {ScriptName}");
-                    InitFailed($"Plugin assembly failed to load: {ScriptName}");
-                    return;
+                    if (plugin == null)
+                    {
+                        //RemoteLogger.Error($"Plugin assembly failed to load: {ScriptName}");
+                        InitFailed($"Plugin assembly failed to load: {ScriptName}");
+                        return;
+                    }
+
+                    if (!plugin.SetPluginInfo(ScriptName, ScriptPath, CompiledAssemblyName))
+                    {
+                        InitFailed();
+                        return;
+                    }
+
+                    if (CompiledAssemblyName == null)
+                    {
+                        plugin.Watcher = Extension.Watcher;
+                        plugin.Loader = Loader;
+                    }
+                    else
+                    {
+                        plugin.Watcher = Extension.CompiledWatcher;
+                        plugin.Loader = Extension.CompiledLoader;
+                    }
+
+                    if (!Interface.Oxide.PluginLoaded(plugin))
+                    {
+                        InitFailed();
+                        return;
+                    }
+
+                    if (!CompiledAssembly.IsBatch)
+                    {
+                        LastGoodAssembly = CompiledAssembly;
+                    }
+
+                    callback?.Invoke(plugin);
                 }
-
-                if (!plugin.SetPluginInfo(ScriptName, ScriptPath))
-                {
-                    InitFailed();
-                    return;
-                }
-
-                plugin.Watcher = Extension.Watcher;
-                plugin.Loader = Loader;
-
-                if (!Interface.Oxide.PluginLoaded(plugin))
-                {
-                    InitFailed();
-                    return;
-                }
-
-                if (!CompiledAssembly.IsBatch)
-                {
-                    LastGoodAssembly = CompiledAssembly;
-                }
-
-                callback?.Invoke(plugin);
             });
         }
 

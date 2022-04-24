@@ -197,6 +197,7 @@ namespace Oxide.Plugins
         }
 
         public FSWatcher Watcher;
+        public string CompiledAssemblyName = null;
 
         protected Covalence covalence = Interface.Oxide.GetLibrary<Covalence>();
         protected Core.Libraries.Lang lang = Interface.Oxide.GetLibrary<Core.Libraries.Lang>();
@@ -249,10 +250,11 @@ namespace Oxide.Plugins
             }
         }
 
-        public virtual bool SetPluginInfo(string name, string path)
+        public virtual bool SetPluginInfo(string name, string path, string compiledAssemblyName)
         {
             Name = name;
             Filename = path;
+            CompiledAssemblyName = compiledAssemblyName;
 
             object[] infoAttributes = GetType().GetCustomAttributes(typeof(InfoAttribute), true);
             if (infoAttributes.Length > 0)
@@ -289,9 +291,9 @@ namespace Oxide.Plugins
         {
             base.HandleAddedToManager(manager);
 
-            if (Filename != null)
+            if (CompiledAssemblyName != null || Filename != null)
             {
-                Watcher.AddMapping(Name);
+                Watcher.AddMapping(CompiledAssemblyName ?? Name);
             }
 
             foreach (string name in pluginReferenceFields.Keys)

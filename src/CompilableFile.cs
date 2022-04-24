@@ -16,6 +16,7 @@ namespace Oxide.Plugins
         public CSharpExtension Extension;
         public CSharpPluginLoader Loader;
         public string Name;
+        public string CompiledAssemblyName;
         public string Directory;
         public string ScriptName;
         public string ScriptPath;
@@ -39,13 +40,14 @@ namespace Oxide.Plugins
 
         public byte[] ScriptSource => ScriptEncoding.GetBytes(string.Join(Environment.NewLine, ScriptLines));
 
-        public CompilableFile(CSharpExtension extension, CSharpPluginLoader loader, string directory, string name)
+        public CompilableFile(CSharpExtension extension, CSharpPluginLoader loader, string directory, string name, string compiledAssemblyName = null)
         {
             Extension = extension;
             Loader = loader;
             Directory = directory;
             ScriptName = name;
-            ScriptPath = Path.Combine(Directory, $"{ScriptName}.cs");
+            CompiledAssemblyName = compiledAssemblyName;
+            ScriptPath = Path.Combine(Directory, compiledAssemblyName != null ? $"{compiledAssemblyName}.dll" : $"{ScriptName}.cs");
             Name = Regex.Replace(ScriptName, "_", "");
             CheckLastModificationTime();
         }

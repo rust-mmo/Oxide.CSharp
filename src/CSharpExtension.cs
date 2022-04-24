@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Oxide.CSharp;
 
 namespace Oxide.Plugins
 {
@@ -39,9 +40,13 @@ namespace Oxide.Plugins
         public override VersionNumber Version => AssemblyVersion;
 
         public FSWatcher Watcher { get; private set; }
+        public FSWatcher CompiledWatcher { get; private set; }
 
         // The .cs plugin loader
         private CSharpPluginLoader loader;
+
+        // The .dll plugin loader
+        public CSharpPluginCompiledLoader CompiledLoader;
 
         // Is the sandbox enabled? (always default to true)
         public static bool SandboxEnabled { get; private set; } = true;
@@ -71,7 +76,10 @@ namespace Oxide.Plugins
         {
             // Register our loader
             loader = new CSharpPluginLoader(this);
+            CompiledLoader = new CSharpPluginCompiledLoader(this);
+
             Manager.RegisterPluginLoader(loader);
+            Manager.RegisterPluginLoader(CompiledLoader);
 
             // Register engine frame callback
             Interface.Oxide.OnFrame(OnFrame);
@@ -91,7 +99,10 @@ namespace Oxide.Plugins
         {
             // Register the watcher
             Watcher = new FSWatcher(pluginDirectory, "*.cs");
+            CompiledWatcher = new FSWatcher(pluginDirectory, "*.dll");
+
             Manager.RegisterPluginChangeWatcher(Watcher);
+            Manager.RegisterPluginChangeWatcher(CompiledWatcher);
         }
 
         /// <summary>
@@ -112,6 +123,15 @@ namespace Oxide.Plugins
         {
             object[] args = new object[] { delta };
             foreach (System.Collections.Generic.KeyValuePair<string, Core.Plugins.Plugin> kv in loader.LoadedPlugins)
+            {
+                CSharpPlugin plugin = kv.Value as CSharpPlugin;
+                if (plugin != null && plugin.HookedOnFrame)
+                {
+                    plugin.CallHook("OnFrame", args);
+                }
+            }
+
+            foreach (System.Collections.Generic.KeyValuePair<string, Core.Plugins.Plugin> kv in CompiledLoader.LoadedPlugins)
             {
                 CSharpPlugin plugin = kv.Value as CSharpPlugin;
                 if (plugin != null && plugin.HookedOnFrame)
